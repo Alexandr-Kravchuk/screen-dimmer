@@ -5,9 +5,19 @@
   "description": "Always-on-top semi-transparent overlay that dims a part of the screen",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "icon": "electron scripts/make-icon.js",
+    "package": "electron-packager . \"Screen Dimmer\" --platform=darwin --arch=arm64,x64 --out=dist --overwrite --icon=assets/icon.icns --app-bundle-id=com.alexandr-kravchuk.screen-dimmer --extend-info=build/extend-info.plist --ignore=\"^/(dist|scripts|build)($|/)\" --ignore=\"^/README\\.md$\"",
+    "postpackage": "for a in dist/*/\"Screen Dimmer.app\"; do codesign --force --deep --sign - \"$a\"; done",
+    "zip": "cd dist && for a in arm64 x64; do ditto -c -k --sequesterRsrc --keepParent \"Screen Dimmer-darwin-$a/Screen Dimmer.app\" \"Screen-Dimmer-$npm_package_version-mac-$a.zip\"; done",
+    "install-app": "npm run package && rm -rf \"/Applications/Screen Dimmer.app\" && cp -R \"dist/Screen Dimmer-darwin-$(uname -m | sed s/x86_64/x64/)/Screen Dimmer.app\" /Applications/"
   },
   "devDependencies": {
+    "@electron/packager": "^20.3.0",
     "electron": "^45.5.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Alexandr-Kravchuk/screen-dimmer.git"
   }
 }
