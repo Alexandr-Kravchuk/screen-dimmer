@@ -298,11 +298,15 @@ if (!gotLock) {
   // ---------- tray ----------
 
   function trayIcon() {
-    // nativeImage can't decode SVG, so the icon ships as PNG (@2x picked up
-    // automatically; the "Template" suffix makes macOS tint it for the menu bar)
-    const img = nativeImage.createFromPath(path.join(__dirname, 'assets', 'trayTemplate.png'));
-    if (process.platform === 'darwin') img.setTemplateImage(true);
-    return img;
+    // nativeImage can't decode SVG, so the icons ship as PNG (@2x is picked up
+    // automatically). macOS: a black template image the menu bar tints for
+    // light/dark. Windows/Linux: a colored icon, visible on any taskbar.
+    if (process.platform === 'darwin') {
+      const img = nativeImage.createFromPath(path.join(__dirname, 'assets', 'trayTemplate.png'));
+      img.setTemplateImage(true);
+      return img;
+    }
+    return nativeImage.createFromPath(path.join(__dirname, 'assets', 'trayColor.png'));
   }
 
   const modLabel = process.platform === 'darwin' ? '⌘' : 'Ctrl';

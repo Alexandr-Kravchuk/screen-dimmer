@@ -1,9 +1,10 @@
-// Renders assets/icon.icns (app icon) with Electron offscreen rendering.
-// Usage: npx electron scripts/make-icon.js   (macOS only: needs iconutil)
+// Renders the app icon with Electron offscreen rendering:
+//   build/icon.png               1024 px source for electron-builder (icns/ico)
+//   assets/trayColor(@2x).png    colored tray icon for Windows/Linux
+// Usage: npm run icon   (macOS only: needs sips)
 const { app, BrowserWindow } = require('electron');
 const { execFileSync } = require('child_process');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 
 const svg = (s) =>
@@ -18,10 +19,6 @@ const svg = (s) =>
 
 app.disableHardwareAcceleration();
 app.whenReady().then(async () => {
-  const set = path.join(os.tmpdir(), 'screen-dimmer.iconset');
-  fs.rmSync(set, { recursive: true, force: true });
-  fs.mkdirSync(set);
-  // render once at 1024 px, downscale the rest with sips
   const w = new BrowserWindow({
     width: 1024, height: 1024, show: false, transparent: true, frame: false,
     useContentSize: true, webPreferences: { offscreen: true },
@@ -30,18 +27,12 @@ app.whenReady().then(async () => {
   await w.loadURL('data:text/html;base64,' + Buffer.from(html).toString('base64'));
   await new Promise((r) => setTimeout(r, 300));
   const img = await w.webContents.capturePage({ x: 0, y: 0, width: 1024, height: 1024 });
-  const master = path.join(set, 'icon_512x512@2x.png');
+  const root = path.join(__dirname, '..');
+  const master = path.join(root, 'build', 'icon.png');
   fs.writeFileSync(master, img.resize({ width: 1024, height: 1024 }).toPNG());
-  for (const base of [16, 32, 128, 256, 512]) {
-    for (const scale of [1, 2]) {
-      const s = base * scale;
-      const name = `icon_${base}x${base}${scale === 2 ? '@2x' : ''}.png`;
-      if (s === 1024) continue;
-      execFileSync('sips', ['-z', String(s), String(s), master, '--out', path.join(set, name)], { stdio: 'ignore' });
-    }
+  for (const [s, name] of [[16, 'trayColor.png'], [32, 'trayColor@2x.png']]) {
+    execFileSync('sips', ['-z', String(s), String(s), master, '--out', path.join(root, 'assets', name)], { stdio: 'ignore' });
   }
-  const out = path.join(__dirname, '..', 'assets', 'icon.icns');
-  execFileSync('iconutil', ['-c', 'icns', set, '-o', out]);
-  console.log('written', out);
+  console.log('written build/icon.png, assets/trayColor*.png');
   app.quit();
 });

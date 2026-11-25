@@ -1,0 +1,78 @@
+name: Release (Windows)
+
+# Manual. Bump "version" in package.json first. Builds the Windows installer
+# (x64 + arm64) and uploads it to the GitHub release v<version>, creating a
+# draft if there is none yet. The macOS half is built, signed and notarized
+# locally with `npm run release:mac` and lands on the same release.
+#
+# Code signing is optional: add repository secrets WIN_CSC_LINK (base64
+# PKCS#12/PFX) and WIN_CSC_KEY_PASSWORD and the installer gets signed.
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Upload to the GitHub release (off = build-only smoke test)
+        type: boolean
+        default: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+
+      - name: Enable code signing when the secrets exist
+        shell: pwsh
+        env:
+          LINK: ${{ secrets.WIN_CSC_LINK }}
+          PASS: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: |
+          if ($env:LINK) {
+            "WIN_CSC_LINK=$env:LINK" >> $env:GITHUB_ENV
+            "WIN_CSC_KEY_PASSWORD=$env:PASS" >> $env:GITHUB_ENV
+            Write-Host 'Signing: on'
+          } else {
+            "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $env:GITHUB_ENV
+            Write-Host 'Signing: off (no WIN_CSC_LINK secret)'
+          }
+
+      - name: Build installer
+        run: npx --no-install electron-builder --win nsis --x64 --arm64 --publish never
+
+      - name: Check the build output
+        shell: pwsh
+        run: |
+          $exe = @(Get-ChildItem dist -Filter 'Screen-Dimmer-*-win-*.exe')
+          if ($exe.Count -lt 1) { throw 'No installer in dist/' }
+          if (-not (Test-Path 'dist/win-unpacked/Screen Dimmer.exe')) { throw 'No unpacked app' }
+          $exe | ForEach-Object { '{0}  {1:N1} MB' -f $_.Name, ($_.Length / 1MB) }
+
+      - name: Upload to the release
+        if: ${{ inputs.publish }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "v$(node -p "require('./package.json').version")"
+          $rel = gh api "repos/$env:GITHUB_REPOSITORY/releases" --paginate --jq ".[] | select(.tag_name==\`"$tag\`") | .id"
+          if (-not $rel) {
+            gh release create $tag --draft --title "Screen Dimmer $($tag.Substring(1))" --generate-notes
+            if ($LASTEXITCODE -ne 0) { throw 'Could not create the draft release' }
+          }
+          $assets = @(Get-ChildItem dist -Filter 'Screen-Dimmer-*-win-*.exe' | ForEach-Object FullName)
+          gh release upload $tag @assets --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Could not upload the installer' }
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !inputs.publish }}
+        with:
+          name: windows-installer
+          path: dist/Screen-Dimmer-*-win-*.exe

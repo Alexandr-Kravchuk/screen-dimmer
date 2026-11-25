@@ -1,23 +1,83 @@
 {
   "name": "screen-dimmer",
   "productName": "Screen Dimmer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Always-on-top semi-transparent overlay that dims a part of the screen",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "icon": "electron scripts/make-icon.js",
-    "package": "electron-packager . \"Screen Dimmer\" --platform=darwin --arch=arm64,x64 --out=dist --overwrite --icon=assets/icon.icns --app-bundle-id=com.alexandr-kravchuk.screen-dimmer --extend-info=build/extend-info.plist --ignore=\"^/(dist|scripts|build)($|/)\" --ignore=\"^/README\\.md$\"",
-    "postpackage": "for a in dist/*/\"Screen Dimmer.app\"; do codesign --force --deep --sign - \"$a\"; done",
-    "zip": "cd dist && for a in arm64 x64; do ditto -c -k --sequesterRsrc --keepParent \"Screen Dimmer-darwin-$a/Screen Dimmer.app\" \"Screen-Dimmer-$npm_package_version-mac-$a.zip\"; done",
-    "install-app": "npm run package && rm -rf \"/Applications/Screen Dimmer.app\" && cp -R \"dist/Screen Dimmer-darwin-$(uname -m | sed s/x86_64/x64/)/Screen Dimmer.app\" /Applications/"
+    "package:dir": "electron-builder --dir",
+    "package:mac": "electron-builder --mac --publish never",
+    "package:win": "electron-builder --win --publish never",
+    "release:mac": "bash scripts/release-mac.sh"
   },
   "devDependencies": {
-    "@electron/packager": "^20.3.0",
-    "electron": "^45.5.0"
+    "electron": "^45.5.0",
+    "electron-builder": "^26.15.3"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/Alexandr-Kravchuk/screen-dimmer.git"
+  },
+  "author": "Alex Kravchuk",
+  "build": {
+    "appId": "com.alexandr-kravchuk.screen-dimmer",
+    "productName": "Screen Dimmer",
+    "artifactName": "Screen-Dimmer-${version}-${os}-${arch}.${ext}",
+    "icon": "build/icon.png",
+    "files": [
+      "main.js",
+      "preload.js",
+      "*.html",
+      "*.css",
+      "bar.js",
+      "dim.js",
+      "grip.js",
+      "assets/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.utilities",
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.inherit.plist",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "extendInfo": {
+        "LSUIElement": true
+      }
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }
