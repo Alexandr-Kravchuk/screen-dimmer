@@ -74,6 +74,17 @@ codesign --verify --deep --strict --verbose=2 "$APP_PATH"
 xcrun stapler validate "$APP_PATH"
 spctl -a -vvv -t execute "$APP_PATH"
 
+# electron-builder notarizes the app inside; the DMG itself (signed via
+# build.dmg.sign) needs its own notarization + staple, or Gatekeeper rejects it.
+DMG="$(find dist -maxdepth 1 -name '*.dmg' | head -1)"
+[[ -n "$DMG" ]] || die "No DMG in dist/."
+log "Notarizing $DMG"
+xcrun notarytool submit "$DMG" --key "$APPLE_API_KEY" --key-id "$APPLE_API_KEY_ID" \
+  --issuer "$APPLE_API_ISSUER" --wait | tee /dev/stderr | grep -q 'status: Accepted' \
+  || die "DMG notarization was not accepted."
+xcrun stapler staple "$DMG"
+spctl -a -vv -t open --context context:primary-signature "$DMG"
+
 shopt -s nullglob
 ASSETS=(dist/*.dmg dist/*-mac-*.zip)
 shopt -u nullglob
