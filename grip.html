@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <title>Grip</title>
+  <style>
+    html, body {
+      margin: 0; width: 100%; height: 100%;
+      overflow: hidden; background: transparent;
+    }
+    #grip {
+      position: absolute;
+      right: 3px;
+      bottom: 3px;
+      width: 14px;
+      height: 14px;
+      cursor: nwse-resize;
+    }
+    #grip::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      border-right: 2px solid rgba(255, 255, 255, 0.55);
+      border-bottom: 2px solid rgba(255, 255, 255, 0.55);
+      border-bottom-right-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div id="grip"></div>
+  <script src="grip.js"></script>
+</body>
+</html>

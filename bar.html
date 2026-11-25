@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <title>Bar</title>
+  <link rel="stylesheet" href="bar.css" />
+</head>
+<body>
+  <div id="bar">
+    <div id="grip" title="Drag to move">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    </div>
+
+    <div class="ctrl">
+      <label for="opacity" class="lbl">Opacity</label>
+      <input id="opacity" class="no-drag" type="range" min="5" max="95" step="1" value="60" />
+      <span id="opacity-val">60%</span>
+    </div>
+
+    <div class="spacer"></div>
+
+    <button id="full" class="no-drag icon" title="Full screen (⌘⇧F / Ctrl⇧F)">⤢</button>
+    <button id="passthrough" class="no-drag icon"
+            title="Clicks pass through everything, including this bar. Turn off: tray menu or ⌘⇧P / Ctrl⇧P">⊘</button>
+    <button id="hide" class="no-drag icon" title="Hide (Esc)">▭</button>
+    <button id="quit" class="no-drag icon" title="Quit">✕</button>
+  </div>
+
+  <script src="bar.js"></script>
+</body>
+</html>

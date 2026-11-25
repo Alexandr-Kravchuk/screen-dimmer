@@ -1,0 +1,13 @@
+{
+  "name": "screen-dimmer",
+  "productName": "Screen Dimmer",
+  "version": "1.0.0",
+  "description": "Always-on-top semi-transparent overlay that dims a part of the screen",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^45.5.0"
+  }
+}

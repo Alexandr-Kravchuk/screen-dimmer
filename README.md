@@ -1,0 +1,74 @@
+# Screen Dimmer
+
+An Electron app that puts an always-on-top, semi-transparent overlay over any
+part of the screen to tone down its brightness — handy for a glaring video,
+a white web page next to a dark editor, or a too-bright second monitor.
+
+## Run
+
+```bash
+npm install
+npm start
+```
+
+## Usage
+
+- **Move** — drag the bar anywhere except its controls
+  (or use the arrow keys, `Shift`+arrows = 1 px).
+- **Resize** — drag the bottom-right corner handle.
+- **Full screen** — the `⤢` button, a double-click on the bar,
+  `⌘⇧F` / `Ctrl+Shift+F`, or the tray menu. The whole display below the menu
+  bar is dimmed (the Dock stays clickable) and the bar moves under the menu
+  bar. Press again (`⤡`) to return to the previous size and position.
+- **Opacity** — the slider in the bar (5–95%) or the tray menu (20/40/60/80/95%).
+- **Click-through** — the dimmed area always lets clicks through to the apps
+  underneath. The `⊘` button (or `⌘⇧P` / `Ctrl+Shift+P`) makes the bar
+  click-through as well (the bar fades); turn it off with `⌘⇧P` /
+  `Ctrl+Shift+P` or the tray menu. It is always off after a restart.
+- **Show / hide** — click the menu bar icon (a monitor with a moon), press
+  `Esc`, or `⌘⇧D` / `Ctrl+Shift+D`. Right-click (or `Ctrl`+click) the icon
+  for the menu: opacity, full screen, pass-through, reset position, quit.
+- **Quit** — the `✕` button in the bar or "Quit" in the tray menu.
+
+Position, size, opacity and full-screen mode persist between launches
+(`~/Library/Application Support/Screen Dimmer/dimmer-state.json` on macOS).
+On macOS the app lives in the menu bar only (no Dock icon).
+
+## Structure
+
+The overlay is made of three windows, so the interactive parts never switch
+between click-through and interactive mode (on macOS that switch races and
+some clicks fall through to the window underneath).
+
+| File                              | Purpose                                                       |
+| --------------------------------- | ------------------------------------------------------------- |
+| `main.js`                         | the three windows, tray, IPC, global shortcuts, state, displays |
+| `preload.js`                      | safe renderer ↔ main bridge (`contextBridge`)                 |
+| `dim.html` / `dim.js`             | the dimming layer — always click-through                      |
+| `bar.html` / `bar.css` / `bar.js` | the control bar: drag, opacity, buttons, keyboard             |
+| `grip.html` / `grip.js`           | the resize handle in the bottom-right corner                  |
+| `assets/trayTemplate*.png`        | menu bar icon (PNG: `nativeImage` can't decode SVG)           |
+
+## Implementation notes
+
+- Windows: `transparent: true`, `frame: false`, `hasShadow: false`,
+  `setAlwaysOnTop(true, 'screen-saver')` — above regular windows.
+- `dimWin.setIgnoreMouseEvents(true)` — the dim layer never takes the mouse;
+  the bar and the handle are interactive unless pass-through is on.
+- Dragging is manual: `bar.js` sends the new position (once per frame),
+  `main.js` moves only `dimWin`, and the bar and the handle are its child
+  windows (`parent`), so macOS moves them atomically with no lag. Native
+  `-webkit-app-region: drag` is not used: it moved only the bar and the rest
+  caught up a frame later via the `move` event.
+- `acceptFirstMouse: true` — the app is never active, so the first click must
+  reach the control instead of only activating the window.
+- Pass-through is not persisted (otherwise the bar stays unclickable after a
+  restart); while it is on, the bar is semi-transparent.
+- Resizing is manual (`screenX/screenY` → `setBounds`), because the system
+  resize of transparent frameless windows is unreliable.
+- Full screen keeps the normal rectangle in memory and lays the windows out
+  over the display's area below the menu bar (macOS won't place a window over
+  the menu bar).
+- Multi-monitor: the size is clamped to the display's work area; saved bounds
+  and arrow-key nudges are checked against the connected displays, and the
+  overlay comes back on screen after a monitor is unplugged.
